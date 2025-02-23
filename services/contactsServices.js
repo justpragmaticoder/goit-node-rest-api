@@ -1,58 +1,48 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import Contact from "../db/models/contact.js";
+import HttpError from '../helpers/HttpError.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+export const listContacts = async () => {
+    return await Contact.findAll();
+};
 
-const contactsPath = path.join(__dirname, '../db/contacts.json');
+export const getContactById = async (contactId) => {
+    return await Contact.findByPk(contactId);
+};
 
-export async function listContacts() {
-  try {
-    const data = await fs.readFile(contactsPath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading contacts: ', error.message);
-    return [];
-  }
-}
+export const removeContact = async (contactId) => {
+    const contact = await Contact.findByPk(contactId);
+    if (!contact) {
+        return null;
+    }
+    await contact.destroy();
+    return contact;
+};
 
-export async function getContactById(contactId) {
-  const contacts = await listContacts();
-  return contacts.find((contact) => contact.id === contactId) || null;
-}
+export const addContact = async (name, email, phone) => {
+    return await Contact.create({ name, email, phone });
+};
 
-export async function removeContact(contactId) {
-  const contacts = await listContacts();
-  const contactIndex = contacts.findIndex((contact) => contact.id === contactId);
-  if (contactIndex === -1) {
-    return null;
-  }
-  const [removedContact] = contacts.splice(contactIndex, 1);
-  await fs.writeFile(contactsPath, JSON.stringify(contacts, null, 2));
-  return removedContact;
-}
+export const updateContact = async (contactId, updates) => {
+    const contact = await Contact.findByPk(contactId);
+    if (!contact) {
+        return null;
+    }
 
-export async function addContact(name, email, phone) {
-  const contacts = await listContacts();
-  const newContact = { id: Date.now().toString(), name, email, phone };
-  contacts.push(newContact);
-  await fs.writeFile(contactsPath, JSON.stringify(contacts, null, 2));
-  return newContact;
-}
+    await contact.update(updates);
+    return contact;
+};
 
-export async function updateContact(contactId, updates) {
-  const contacts = await listContacts();
-  const contactIndex = contacts.findIndex((contact) => contact.id === contactId);
+export const updateStatusContact = async (contactId, favorite) => {
+    if (typeof favorite !== 'boolean') {
+        throw new HttpError(400, "Invalid request. 'favorite' must be a boolean value.");
+    }
 
-  if (contactIndex === -1) {
-    return null;
-  }
+    const contact = await Contact.findByPk(contactId);
+    if (!contact) {
+        return null;
+    }
 
-  // Preserve existing fields and update only those that are provided
-  contacts[contactIndex] = { ...contacts[contactIndex], ...updates };
-
-  await fs.writeFile(contactsPath, JSON.stringify(contacts, null, 2));
-
-  return contacts[contactIndex];
-}
+    contact.favorite = favorite;
+    await contact.save();
+    return contact;
+};
