@@ -1,7 +1,34 @@
-import { listContacts, getContactById, removeContact, addContact, updateContact as updateContactData } from '../services/contactsServices.js';
+import {
+    listContacts,
+    getContactById,
+    removeContact,
+    addContact,
+    updateContact as updateContactData,
+    updateStatusContact,
+} from '../services/contactsServices.js';
 import HttpError from '../helpers/HttpError.js';
 import validateBody from '../helpers/validateBody.js';
-import { createContactSchema, updateContactSchema } from '../schemas/contactsSchemas.js';
+import { createContactSchema, updateContactSchema, updateFavoriteSchema } from '../schemas/contactsSchemas.js';
+
+export const updateFavorite = [
+    validateBody(updateFavoriteSchema),
+    async (req, res, next) => {
+        try {
+            const { contactId } = req.params;
+            const { favorite } = req.body;
+
+            const updatedContact = await updateStatusContact(contactId, favorite);
+
+            if (!updatedContact) {
+                return next(HttpError(404, 'Not found'));
+            }
+
+            res.status(200).json(updatedContact);
+        } catch (error) {
+            next(HttpError(400, error.message));
+        }
+    },
+];
 
 export const getAllContacts = async (req, res, next) => {
     try {
