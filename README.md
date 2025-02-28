@@ -21,7 +21,7 @@ Includes **unit tests** using **Jest & Supertest**.
 ```sh
 git clone https://github.com/justpragmaticoder/goit-node-rest-api.git
 cd goit-node-rest-api.git
-git checkout 03-postgresql
+git checkout 04-auth
 ```
 
 **Install dependencies**:
@@ -64,16 +64,27 @@ npm test
 ├── 📂 db/              # Database configuration & models
 │   ├── 📂 models/      # Sequelize models
 │   │   ├── contact.js  # Contact model
+│   │   ├── user.js     # User model
 │   ├── 📂 config/      # Database configuration
 │   │   ├── db.js       # Sequelize instance
 ├── 📂 routes/          # Express routes
+│   ├── authRouter.js
 │   ├── contactsRouter.js
 ├── 📂 controllers/     # API controllers
+│   ├── authControllers.js
 │   ├── contactsControllers.js
 ├── 📂 services/        # Business logic & DB operations
+│   ├── authServices.js
 │   ├── contactsServices.js
+├── 📂 schemas/        # Joi validation schemas
+│   ├── authSchemas.js
+│   ├── contactsSchemas.js
 ├── 📂 tests/           # Jest tests
+│   ├── authControllers.spec.js
 │   ├── contactsControllers.spec.js
+├── 📂 utils/           # Helper functions
+│   ├── catch-async.js
+│   ├── random-port.js
 ├── 📜 .env.example     # Example environment file
 ├── 📜 .gitignore       # Ignore sensitive files
 ├── 📜 app.js           # Express app configuration
@@ -84,11 +95,23 @@ npm test
 
 ## 🔗 API Endpoints
 
-| Method   | Endpoint                          | Description                   |
-|----------|----------------------------------|-------------------------------|
-| `GET`    | `/api/contacts`                  | Get all contacts              |
-| `GET`    | `/api/contacts/:id`              | Get a contact by ID           |
-| `POST`   | `/api/contacts`                  | Create a new contact          |
-| `PUT`    | `/api/contacts/:id`              | Update a contact              |
-| `DELETE` | `/api/contacts/:id`              | Delete a contact              |
-| `PATCH`  | `/api/contacts/:id/favorite`     | Update the “favorite” status  |
+# Contacts Endpoints
+
+| Method | Endpoint                            | Description                  |
+|--------|-------------------------------------|------------------------------|
+| GET    | `/api/contacts`                     | Get all contacts             |
+| GET    | `/api/contacts/:id`                 | Get a contact by ID          |
+| POST   | `/api/contacts`                     | Create a new contact         |
+| PUT    | `/api/contacts/:id`                 | Update a contact             |
+| DELETE | `/api/contacts/:id`                 | Delete a contact             |
+| PATCH  | `/api/contacts/:contactId/favorite` | Update the “favorite” status |
+
+# Auth Endpoints
+
+| Method | Endpoint                    | Description                                                  |
+|--------|-----------------------------|--------------------------------------------------------------|
+| POST   | `/api/auth/register`        | Register a new user                                          |
+| POST   | `/api/auth/login`           | Login a user and return an authentication token              |
+| POST   | `/api/auth/logout`          | Logout a user (requires a valid token)                       |
+| GET    | `/api/auth/current`         | Get current authenticated user’s details                     |
+| GET    | `/api/auth/subscription`    | Get/update user’s subscription (requires a valid token)      |

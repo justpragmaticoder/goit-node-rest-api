@@ -1,12 +1,16 @@
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { sequelize } from '../db/config/db.js';
-import Contact from '../db/models/contact.js';
-import { app, server } from '../app.js'; // Import Express app
+import '../db/models/contact.js';
+import '../db/models/user.js';
+import { startServer } from '../app.js';
+import { getRandomPort } from '../utils/random-port.js'; // Import Express app
 
 const mockContacts = [
-    { name: 'Alice', email: 'alice@example.com', phone: '1234567890', favorite: false },
-    { name: 'Bob', email: 'bob@example.com', phone: '0987654321', favorite: true },
+    { name: 'Alice', email: 'alice@example.com', phone: '1234567890', favorite: false, owner: null },
+    { name: 'Bob', email: 'bob@example.com', phone: '0987654321', favorite: true, owner: null },
 ];
 
 jest.setTimeout(10000);
@@ -15,26 +19,48 @@ jest.setTimeout(10000);
  * IMPORTANT!!! Be careful, it's kind a integration tests (works with real DB connection and application)
  */
 describe('Contacts API (Real Database)', () => {
+    let userModel;
+    let contactModel;
+    let server;
+    let testUser;
+    let token;
+
     beforeAll(async () => {
-        await sequelize.sync({ force: true }); // Reset database before tests
+        server = await startServer(getRandomPort());
+        await sequelize.sync({ force: true });
+
+        userModel = sequelize.models.user;
+        contactModel = sequelize.models.contact;
+
+        // Create a test user and generate a valid token
+        const password = await bcrypt.hash('testpass', 10);
+        testUser = await userModel.create({ email: 'test@example.com', password, token: null });
+        token = jwt.sign({ id: testUser.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+        await testUser.update({ token });
     });
 
     beforeEach(async () => {
-        await Contact.bulkCreate(mockContacts);
+        await contactModel.bulkCreate(
+            mockContacts.map((item) => {
+                return { ...item, owner: testUser.id };
+            }),
+        );
     });
 
     afterEach(async () => {
-        await Contact.destroy({ where: {} });
+        await contactModel.destroy({ where: {} });
     });
 
     afterAll(async () => {
         await sequelize.close();
-        await server.close();
+        if (server && server.close) {
+            await new Promise((resolve) => server.close(resolve));
+        }
     });
 
     describe('GET /api/contacts', () => {
         it('should return all contacts', async () => {
-            const res = await request(app).get('/api/contacts');
+            const res = await request(server).get('/api/contacts').set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(200);
             expect(res.body.length).toBe(2);
@@ -45,32 +71,40 @@ describe('Contacts API (Real Database)', () => {
 
     describe('GET /api/contacts/:id', () => {
         it('should return a contact by ID', async () => {
-            const contact = await Contact.findOne();
-            const res = await request(app).get(`/api/contacts/${contact.id}`);
+            const contact = await contactModel.findOne({ where: { owner: testUser.id } });
+            const res = await request(server).get(`/api/contacts/${contact.id}`).set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe(contact.name);
         });
 
-        it('should return 404 if contact is not found', async () => {
-            const res = await request(app).get('/api/contacts/999');
+        it('should return 404 if owner is valid but contact is not found', async () => {
+            const res = await request(server).get('/api/contacts/999').set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(404);
             expect(res.body).toEqual({ message: 'Not found' });
+        });
+
+        it('should return 404 if contact is valid but owner is not', async () => {
+            const contact = await contactModel.findOne({ where: { owner: testUser.id } });
+            const res = await request(server).get(`/api/contacts/${contact.id}`).set('Authorization', `Bearer some_wrong_token`);
+
+            expect(res.status).toBe(401);
+            expect(res.body).toEqual({ message: 'Not authorized' });
         });
     });
 
     describe('DELETE /api/contacts/:id', () => {
         it('should delete a contact by ID', async () => {
-            const contact = await Contact.findOne();
-            const res = await request(app).delete(`/api/contacts/${contact.id}`);
+            const contact = await contactModel.findOne({ where: { owner: testUser.id } });
+            const res = await request(server).delete(`/api/contacts/${contact.id}`).set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe(contact.name);
         });
 
         it('should return 404 if contact is not found', async () => {
-            const res = await request(app).delete('/api/contacts/999');
+            const res = await request(server).delete('/api/contacts/999').set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(404);
             expect(res.body).toEqual({ message: 'Not found' });
@@ -80,7 +114,7 @@ describe('Contacts API (Real Database)', () => {
     describe('POST /api/contacts', () => {
         it('should create a new contact', async () => {
             const newContact = { name: 'Charlie', email: 'charlie@example.com', phone: '1112223333' };
-            const res = await request(app).post('/api/contacts').send(newContact);
+            const res = await request(server).post('/api/contacts').send(newContact).set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(201);
             expect(res.body.name).toBe(newContact.name);
@@ -89,17 +123,17 @@ describe('Contacts API (Real Database)', () => {
 
     describe('PUT /api/contacts/:id', () => {
         it('should update a contact', async () => {
-            const contact = await Contact.findOne();
+            const contact = await contactModel.findOne();
             const updates = { name: 'Updated Alice' };
 
-            const res = await request(app).put(`/api/contacts/${contact.id}`).send(updates);
+            const res = await request(server).put(`/api/contacts/${contact.id}`).send(updates).set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('Updated Alice');
         });
 
         it('should return 404 if contact is not found', async () => {
-            const res = await request(app).put('/api/contacts/999').send({ name: 'Updated Name' });
+            const res = await request(server).put('/api/contacts/999').send({ name: 'Updated Name' }).set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(404);
             expect(res.body).toEqual({ message: 'Not found' });
@@ -108,23 +142,26 @@ describe('Contacts API (Real Database)', () => {
 
     describe('PATCH /api/contacts/:id/favorite', () => {
         it('should update the favorite status', async () => {
-            const contact = await Contact.findOne();
-            const res = await request(app).patch(`/api/contacts/${contact.id}/favorite`).send({ favorite: true });
+            const contact = await contactModel.findOne();
+            const res = await request(server)
+                .patch(`/api/contacts/${contact.id}/favorite`)
+                .send({ favorite: true })
+                .set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(200);
             expect(res.body.favorite).toBe(true);
         });
 
         it('should return 400 if favorite is missing', async () => {
-            const contact = await Contact.findOne();
-            const res = await request(app).patch(`/api/contacts/${contact.id}/favorite`).send({});
+            const contact = await contactModel.findOne();
+            const res = await request(server).patch(`/api/contacts/${contact.id}/favorite`).send({}).set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(400);
             expect(res.body.message).toContain('"favorite" is required');
         });
 
         it('should return 404 if contact is not found', async () => {
-            const res = await request(app).patch('/api/contacts/999/favorite').send({ favorite: true });
+            const res = await request(server).patch('/api/contacts/999/favorite').send({ favorite: true }).set('Authorization', `Bearer ${token}`);
 
             expect(res.status).toBe(404);
             expect(res.body).toEqual({ message: 'Not found' });
