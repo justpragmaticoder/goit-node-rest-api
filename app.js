@@ -3,40 +3,67 @@ import morgan from 'morgan';
 import cors from 'cors';
 
 import contactsRouter from './routes/contactsRouter.js';
-import { connectDB, sequelize } from './db/config/db.js'; // Import database connection
+import authRouter from './routes/authRouter.js';
+import { connectDB } from './db/config/db.js';
+import errorMiddleware from './middlewares/errorMiddleware.js';
 
 export const app = express();
 
+// Middleware
 app.use(morgan('tiny'));
 app.use(cors());
 app.use(express.json());
 
+// Routes
 app.use('/api/contacts', contactsRouter);
+app.use('/api/auth', authRouter);
 
-app.use((_, res) => {
+// 404 Handler
+app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
 
-app.use((err, req, res, next) => {
-    const { status = 500, message = 'Server error' } = err;
-    res.status(status).json({ message });
-});
+// Error handling middleware
+app.use(errorMiddleware);
 
-const PORT = process.env.PORT || 3000;
-
+const PORT = process.env.APP_PORT || 3000;
 let server;
 
-const startServer = async () => {
+export const startServer = async (port) => {
     try {
         await connectDB();
-        await sequelize.sync();
-        server = app.listen(PORT, () => console.log(`Server is running on port: ${PORT}`));
+        server = await new Promise((resolve, reject) => {
+            const appPort = port || PORT;
+            const srv = app.listen(appPort, () => {
+                console.log(`Server is running on port: ${appPort}`);
+                resolve(srv);
+            });
+            srv.on('error', reject);
+        });
+
+        // Optional: handle graceful shutdown
+        process.on('SIGTERM', shutdown);
+        process.on('SIGINT', shutdown);
+
+        return server;
     } catch (error) {
         console.error('Database connection failed:', error.message);
         process.exit(1);
     }
 };
 
-startServer();
+const shutdown = async () => {
+    if (server) {
+        server.close(() => {
+            console.log('Server closed gracefully');
+            process.exit(0);
+        });
+    }
+};
+
+// If this file is run directly (and not imported), start the server.
+if (process.env.NODE_ENV !== 'test') {
+    startServer();
+}
 
 export { server };

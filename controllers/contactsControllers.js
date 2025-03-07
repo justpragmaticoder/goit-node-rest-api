@@ -1,96 +1,79 @@
 import {
     listContacts,
-    getContactById,
-    removeContact,
-    addContact,
-    updateContact as updateContactData,
+    removeOwnerContact,
+    addOwnerContact,
+    updateOwnerContactData,
     updateStatusContact,
+    getOwnerContactById,
 } from '../services/contactsServices.js';
 import HttpError from '../helpers/HttpError.js';
 import validateBody from '../helpers/validateBody.js';
 import { createContactSchema, updateContactSchema, updateFavoriteSchema } from '../schemas/contactsSchemas.js';
+import { catchAsync } from '../utils/catch-async.js';
 
 export const updateFavorite = [
     validateBody(updateFavoriteSchema),
-    async (req, res, next) => {
-        try {
-            const { contactId } = req.params;
-            const { favorite } = req.body;
+    catchAsync(async (req, res, next) => {
+        const { contactId } = req.params;
+        const { favorite } = req.body;
 
-            const updatedContact = await updateStatusContact(contactId, favorite);
+        const updatedContact = await updateStatusContact(contactId, favorite);
 
-            if (!updatedContact) {
-                return next(HttpError(404, 'Not found'));
-            }
-
-            res.status(200).json(updatedContact);
-        } catch (error) {
-            next(HttpError(400, error.message));
+        if (!updatedContact) {
+            throw HttpError(404, 'Not found');
         }
-    },
+
+        res.status(200).json(updatedContact);
+    }),
 ];
 
-export const getAllContacts = async (req, res, next) => {
-    try {
-        const contacts = await listContacts();
+export const getAllContacts = [
+    catchAsync(async (req, res, next) => {
+        const contacts = await listContacts(req.user.id);
         res.status(200).json(contacts);
-    } catch (error) {
-        next(error);
-    }
-};
+    }),
+];
 
-export const getOneContact = async (req, res, next) => {
-    try {
+export const getOneContact = [
+    catchAsync(async (req, res, next) => {
         const { id } = req.params;
-        const contact = await getContactById(id);
+        const contact = await getOwnerContactById({ owner: req.user.id, id });
         if (!contact) {
-            return next(HttpError(404, 'Not found'));
+            throw HttpError(404, 'Not found');
         }
-        res.status(200).json(contact);
-    } catch (error) {
-        next(error);
-    }
-};
+        return res.status(200).json(contact);
+    }),
+];
 
-export const deleteContact = async (req, res, next) => {
-    try {
+export const deleteContact = [
+    catchAsync(async (req, res, next) => {
         const { id } = req.params;
-        const removedContact = await removeContact(id);
+        const removedContact = await removeOwnerContact({ owner: req.user.id, id });
         if (!removedContact) {
-            return next(HttpError(404, 'Not found'));
+            throw HttpError(404, 'Not found');
         }
         res.status(200).json(removedContact);
-    } catch (error) {
-        next(error);
-    }
-};
+    }),
+];
 
 export const createContact = [
     validateBody(createContactSchema),
-    async (req, res, next) => {
-        try {
-            const { name, email, phone } = req.body;
-            const newContact = await addContact(name, email, phone);
-            res.status(201).json(newContact);
-        } catch (error) {
-            next(error);
-        }
-    },
+    catchAsync(async (req, res, next) => {
+        const { name, email, phone } = req.body;
+        const newContact = await addOwnerContact({ name, email, phone, owner: req.user.id });
+        res.status(201).json(newContact);
+    }),
 ];
 
 export const updateContact = [
     validateBody(updateContactSchema),
-    async (req, res, next) => {
-        try {
-            const { id } = req.params;
-            const updates = req.body;
-            const updatedContact = await updateContactData(id, updates);
-            if (!updatedContact) {
-                return next(HttpError(404, 'Not found'));
-            }
-            res.status(200).json(updatedContact);
-        } catch (error) {
-            next(error);
+    catchAsync(async (req, res, next) => {
+        const { id } = req.params;
+        const updates = req.body;
+        const updatedContact = await updateOwnerContactData({ owner: req.user.id, id, updates });
+        if (!updatedContact) {
+            throw HttpError(404, 'Not found');
         }
-    },
+        res.status(200).json(updatedContact);
+    }),
 ];
