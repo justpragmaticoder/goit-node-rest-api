@@ -6,7 +6,7 @@ import { sequelize } from '../db/config/db.js';
 import '../db/models/contact.js';
 import '../db/models/user.js';
 import { startServer } from '../app.js';
-import { getRandomPort } from '../utils/random-port.js'; // Import Express app
+import { getRandomPort } from '../utils/random-port.util.js'; // Import Express app
 
 const mockContacts = [
     { name: 'Alice', email: 'alice@example.com', phone: '1234567890', favorite: false, owner: null },

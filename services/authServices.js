@@ -3,6 +3,7 @@ import User from '../db/models/user.js';
 import HttpError from '../helpers/HttpError.js';
 import jwt from 'jsonwebtoken';
 import gravatar from 'gravatar';
+import { moveFile } from '../utils/move-file.util.js';
 
 const SECRET_KEY = process.env.JWT_SECRET;
 
@@ -44,6 +45,8 @@ export const updateUserSubscription = async ({ id, subscription }) => {
 };
 
 export const updateUserAvatar = async ({ userId, file }) => {
+    await moveFile(`./temp/${file.filename}`, `./public/${process.env.AVATAR_DIR}`);
+
     const avatarURL = `/${process.env.AVATAR_DIR}/${file.filename}`;
 
     await User.update({ avatarURL }, { where: { id: userId } });

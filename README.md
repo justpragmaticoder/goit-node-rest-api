@@ -91,8 +91,8 @@ npm test
 │   ├── authControllers.spec.js
 │   ├── contactsControllers.spec.js
 ├── 📂 utils/           # Helper functions
-│   ├── catch-async.js
-│   ├── random-port.js
+│   ├── catch-async.util.js
+│   ├── random-port.util.js
 ├── 📜 .env.example     # Example environment file
 ├── 📜 .gitignore       # Ignore sensitive files
 ├── 📜 app.js           # Express app configuration

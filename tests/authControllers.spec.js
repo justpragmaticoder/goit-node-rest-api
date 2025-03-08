@@ -1,11 +1,10 @@
-import fs from 'fs';
 import path from 'path';
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { sequelize } from '../db/config/db.js';
 import '../db/models/user.js';
 import { startServer } from '../app.js';
-import { getRandomPort } from '../utils/random-port.js';
+import { getRandomPort } from '../utils/random-port.util.js';
 
 jest.setTimeout(10000);
 
@@ -146,7 +145,7 @@ describe('Auth API (Real Database)', () => {
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('message', 'Avatar updated successfully');
             expect(res.body).toHaveProperty('avatarURL');
-            expect(res.body.avatarURL).toMatch(/\/avatars\/\d+\.\w+$/);
+            expect(res.body.avatarURL).toMatch(/^\/avatars\/\d+_[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/);
         });
     });
 });
