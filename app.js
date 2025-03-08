@@ -1,12 +1,14 @@
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
+import path from 'path';
 
 import contactsRouter from './routes/contactsRouter.js';
 import authRouter from './routes/authRouter.js';
 import { connectDB } from './db/config/db.js';
 import errorMiddleware from './middlewares/errorMiddleware.js';
 
+const __dirname = path.resolve();
 export const app = express();
 
 // Middleware
@@ -17,6 +19,8 @@ app.use(express.json());
 // Routes
 app.use('/api/contacts', contactsRouter);
 app.use('/api/auth', authRouter);
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 404 Handler
 app.use((req, res) => {
