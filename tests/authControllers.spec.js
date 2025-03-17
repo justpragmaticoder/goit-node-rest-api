@@ -1,9 +1,10 @@
+import path from 'path';
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { sequelize } from '../db/config/db.js';
 import '../db/models/user.js';
 import { startServer } from '../app.js';
-import { getRandomPort } from '../utils/random-port.js';
+import { getRandomPort } from '../utils/random-port.util.js';
 
 jest.setTimeout(10000);
 
@@ -33,6 +34,7 @@ describe('Auth API (Real Database)', () => {
             expect(res.body).toHaveProperty('user');
             expect(res.body.user).toHaveProperty('email', defaultCredentials.email);
             expect(res.body.user).toHaveProperty('subscription');
+            expect(res.body.user).toHaveProperty('avatarURL');
         });
 
         it('should return 409 if email is already in use', async () => {
@@ -121,6 +123,29 @@ describe('Auth API (Real Database)', () => {
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('email', 'subscriptionuser@example.com');
             expect(res.body).toHaveProperty('subscription', 'pro');
+        });
+    });
+
+    describe('GET /api/auth/avatars', () => {
+        let token;
+
+        beforeAll(async () => {
+            const credentials = { email: 'subscriptionuser@example.com', password: 'password123' };
+            await request(server).post('/api/auth/register').send(credentials);
+            const loginRes = await request(server).post('/api/auth/login').send(credentials);
+            token = loginRes.body.token;
+        });
+
+        it('should update and return user avatarURL', async () => {
+            const __dirname = path.resolve();
+            const filePath = path.join(__dirname, `/public/${process.env.AVATAR_DIR}/test_avatar.png`);
+
+            const res = await request(server).patch('/api/auth/avatars').set('Authorization', `Bearer ${token}`).attach('avatar', filePath);
+
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('message', 'Avatar updated successfully');
+            expect(res.body).toHaveProperty('avatarURL');
+            expect(res.body.avatarURL).toMatch(/^\/avatars\/\d+_[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/);
         });
     });
 });

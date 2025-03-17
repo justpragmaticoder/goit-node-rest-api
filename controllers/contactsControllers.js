@@ -9,11 +9,11 @@ import {
 import HttpError from '../helpers/HttpError.js';
 import validateBody from '../helpers/validateBody.js';
 import { createContactSchema, updateContactSchema, updateFavoriteSchema } from '../schemas/contactsSchemas.js';
-import { catchAsync } from '../utils/catch-async.js';
+import { catchAsyncUtil } from '../utils/catch-async.util.js';
 
 export const updateFavorite = [
     validateBody(updateFavoriteSchema),
-    catchAsync(async (req, res, next) => {
+    catchAsyncUtil(async (req, res, next) => {
         const { contactId } = req.params;
         const { favorite } = req.body;
 
@@ -28,14 +28,14 @@ export const updateFavorite = [
 ];
 
 export const getAllContacts = [
-    catchAsync(async (req, res, next) => {
+    catchAsyncUtil(async (req, res, next) => {
         const contacts = await listContacts(req.user.id);
         res.status(200).json(contacts);
     }),
 ];
 
 export const getOneContact = [
-    catchAsync(async (req, res, next) => {
+    catchAsyncUtil(async (req, res, next) => {
         const { id } = req.params;
         const contact = await getOwnerContactById({ owner: req.user.id, id });
         if (!contact) {
@@ -46,7 +46,7 @@ export const getOneContact = [
 ];
 
 export const deleteContact = [
-    catchAsync(async (req, res, next) => {
+    catchAsyncUtil(async (req, res, next) => {
         const { id } = req.params;
         const removedContact = await removeOwnerContact({ owner: req.user.id, id });
         if (!removedContact) {
@@ -58,7 +58,7 @@ export const deleteContact = [
 
 export const createContact = [
     validateBody(createContactSchema),
-    catchAsync(async (req, res, next) => {
+    catchAsyncUtil(async (req, res, next) => {
         const { name, email, phone } = req.body;
         const newContact = await addOwnerContact({ name, email, phone, owner: req.user.id });
         res.status(201).json(newContact);
@@ -67,7 +67,7 @@ export const createContact = [
 
 export const updateContact = [
     validateBody(updateContactSchema),
-    catchAsync(async (req, res, next) => {
+    catchAsyncUtil(async (req, res, next) => {
         const { id } = req.params;
         const updates = req.body;
         const updatedContact = await updateOwnerContactData({ owner: req.user.id, id, updates });

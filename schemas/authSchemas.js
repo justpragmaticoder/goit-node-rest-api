@@ -27,3 +27,16 @@ export const subscriptionSchema = Joi.object({
         'string.empty': 'Subscription is required',
     }),
 });
+
+export const updateAvatarSchema = Joi.object({
+    file: Joi.object({
+        mimetype: Joi.string().valid('image/jpeg', 'image/png', 'image/jpg').required().messages({
+            'any.only': 'Only JPG, JPEG, and PNG formats are allowed',
+            'any.required': 'File is required'
+        }),
+        size: Joi.number().max(5 * 1024 * 1024).required().messages({
+            'number.max': 'File size must be less than 5MB',
+            'any.required': 'File is required'
+        })
+    })
+});

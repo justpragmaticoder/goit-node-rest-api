@@ -1,8 +1,11 @@
 import express from 'express';
-import { register, login, logout, current, subscription } from '../controllers/authControllers.js';
+import { register, login, logout, current, subscription, updateAvatar } from '../controllers/authControllers.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
+import upload from '../middlewares/uploadMiddleware.js';
 
 const authRouter = express.Router();
+
+authRouter.patch('/avatars', authMiddleware, upload.single('avatar'), updateAvatar);
 
 authRouter.post('/register', register);
 

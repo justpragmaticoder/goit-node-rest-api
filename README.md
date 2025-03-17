@@ -6,18 +6,20 @@ Includes **unit tests** using **Jest & Supertest**.
 ---
 
 ## 📖 Table of Contents
-- [📌 Installation](#installation)
-- [⚙️ Environment Variables](#environment-variables)
-- [🚀 Running the Server](#running-the-server)
-- [🧪 Running Tests](#running-tests)
-- [📂 Project Structure](#project-structure)
-- [🔗 API Endpoints](#api-endpoints)
+
+-   [📌 Installation](#installation)
+-   [⚙️ Environment Variables](#environment-variables)
+-   [🚀 Running the Server](#running-the-server)
+-   [🧪 Running Tests](#running-tests)
+-   [📂 Project Structure](#project-structure)
+-   [🔗 API Endpoints](#api-endpoints)
 
 ---
 
 ## 📌 Installation
 
 **Clone the repository**:
+
 ```sh
 git clone https://github.com/justpragmaticoder/goit-node-rest-api.git
 cd goit-node-rest-api.git
@@ -25,11 +27,13 @@ git checkout 04-auth
 ```
 
 **Install dependencies**:
+
 ```sh
 npm install
 ```
 
 **Create an .env file based on .env.example**:
+
 ```sh
 cp .env.example .env
 ```
@@ -42,6 +46,7 @@ Ensure your .env file contains the correct database credentials before running t
 ## 🚀 Running the Server
 
 **Run the server in development mode**:
+
 ```sh
 npm start
 ```
@@ -53,6 +58,7 @@ But they are described like a usual unit tests.
 These tests work with a real app and DB connection which is using your .env credentials for connect, be careful.
 
 **Run all tests**:
+
 ```sh
 npm test
 ```
@@ -67,6 +73,8 @@ npm test
 │   │   ├── user.js     # User model
 │   ├── 📂 config/      # Database configuration
 │   │   ├── db.js       # Sequelize instance
+├── 📂 public/          # Express routes
+│   ├── 📂 avatars/     # User avatars
 ├── 📂 routes/          # Express routes
 │   ├── authRouter.js
 │   ├── contactsRouter.js
@@ -83,8 +91,8 @@ npm test
 │   ├── authControllers.spec.js
 │   ├── contactsControllers.spec.js
 ├── 📂 utils/           # Helper functions
-│   ├── catch-async.js
-│   ├── random-port.js
+│   ├── catch-async.util.js
+│   ├── random-port.util.js
 ├── 📜 .env.example     # Example environment file
 ├── 📜 .gitignore       # Ignore sensitive files
 ├── 📜 app.js           # Express app configuration
@@ -98,7 +106,7 @@ npm test
 # Contacts Endpoints
 
 | Method | Endpoint                            | Description                  |
-|--------|-------------------------------------|------------------------------|
+| ------ | ----------------------------------- | ---------------------------- |
 | GET    | `/api/contacts`                     | Get all contacts             |
 | GET    | `/api/contacts/:id`                 | Get a contact by ID          |
 | POST   | `/api/contacts`                     | Create a new contact         |
@@ -108,10 +116,11 @@ npm test
 
 # Auth Endpoints
 
-| Method | Endpoint                    | Description                                                  |
-|--------|-----------------------------|--------------------------------------------------------------|
-| POST   | `/api/auth/register`        | Register a new user                                          |
-| POST   | `/api/auth/login`           | Login a user and return an authentication token              |
-| POST   | `/api/auth/logout`          | Logout a user (requires a valid token)                       |
-| GET    | `/api/auth/current`         | Get current authenticated user’s details                     |
-| GET    | `/api/auth/subscription`    | Get/update user’s subscription (requires a valid token)      |
+| Method | Endpoint                 | Description                                             |
+| ------ | ------------------------ | ------------------------------------------------------- |
+| POST   | `/api/auth/register`     | Register a new user                                     |
+| POST   | `/api/auth/login`        | Login a user and return an authentication token         |
+| POST   | `/api/auth/logout`       | Logout a user (requires a valid token)                  |
+| GET    | `/api/auth/current`      | Get current authenticated user’s details                |
+| GET    | `/api/auth/subscription` | Get/update user’s subscription (requires a valid token) |
+| PATCH  | `/api/auth/avatars`      | Update the “avatar” URL                                 |
