@@ -13,11 +13,14 @@ jest.setTimeout(10000);
  */
 describe('Auth API (Real Database)', () => {
     const defaultCredentials = { email: 'loginuser@example.com', password: 'password123' };
+    let userModel;
     let server;
 
     beforeAll(async () => {
         server = await startServer(getRandomPort());
         await sequelize.sync({ force: true });
+
+        userModel = sequelize.models.user;
     });
 
     afterAll(async () => {
@@ -146,6 +149,29 @@ describe('Auth API (Real Database)', () => {
             expect(res.body).toHaveProperty('message', 'Avatar updated successfully');
             expect(res.body).toHaveProperty('avatarURL');
             expect(res.body.avatarURL).toMatch(/^\/avatars\/\d+_[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/);
+        });
+    });
+
+    describe('POST /api/verify/:verificationToken', () => {
+        const specificUserCreds = { email: `someVeryUniqueEmail@gmail.com`, password: 'password123' };
+
+        beforeEach(async () => {
+            const result = await request(server).post('/api/auth/register').send(specificUserCreds);
+        });
+
+        afterEach(async () => {
+            await userModel.destroy({ where: { email: specificUserCreds.email } });
+        });
+
+        it('should successfully verify user', async () => {
+            const userBefore = await userModel.findOne({ where: { email: specificUserCreds.email } });
+            const res = await request(server).get(`/api/auth/verify/${userBefore.verificationToken}`);
+            console.log('res: ', res.body);
+            const userAfter = await userModel.findOne({ where: { email: specificUserCreds.email } });
+            expect(userBefore.verify).toBeFalsy();
+            expect(res.status).toBe(200);
+            expect(res.body.message).toEqual('Verification successful');
+            expect(userAfter.verify).toBeTruthy();
         });
     });
 });
