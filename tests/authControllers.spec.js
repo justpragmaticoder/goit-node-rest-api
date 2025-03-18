@@ -13,11 +13,14 @@ jest.setTimeout(10000);
  */
 describe('Auth API (Real Database)', () => {
     const defaultCredentials = { email: 'loginuser@example.com', password: 'password123' };
+    let userModel;
     let server;
 
     beforeAll(async () => {
         server = await startServer(getRandomPort());
         await sequelize.sync({ force: true });
+
+        userModel = sequelize.models.user;
     });
 
     afterAll(async () => {
@@ -49,13 +52,25 @@ describe('Auth API (Real Database)', () => {
     });
 
     describe('POST /api/auth/login', () => {
-        beforeAll(async () => {
+        beforeEach(async () => {
             // Ensure a user exists for login tests.
             await request(server).post('/api/auth/register').send(defaultCredentials);
         });
 
+        afterEach(async () => {
+            await userModel.destroy({ where: { email: defaultCredentials.email } });
+        });
+
         it('should login a user with valid credentials', async () => {
+            await userModel.update(
+              { verify: true },
+              {
+                  where: { email: defaultCredentials.email },
+              },
+            );
+
             const res = await request(server).post('/api/auth/login').send(defaultCredentials);
+
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('token');
             expect(res.body).toHaveProperty('user');
@@ -67,6 +82,12 @@ describe('Auth API (Real Database)', () => {
             expect(res.status).toBe(401);
             expect(res.body).toEqual({ message: 'Email or password is wrong' });
         });
+
+        it('should return 403 with valid credentials but not verified email', async () => {
+            const res = await request(server).post('/api/auth/login').send({ email: defaultCredentials.email, password: defaultCredentials.password });
+            expect(res.status).toBe(403);
+            expect(res.body).toEqual({ message: 'Email is not verified' });
+        });
     });
 
     describe('POST /api/auth/logout', () => {
@@ -76,6 +97,14 @@ describe('Auth API (Real Database)', () => {
             // Ensure a user exists for logout testing.
             const credentials = { email: 'logoutuser@example.com', password: 'password123' };
             await request(server).post('/api/auth/register').send(credentials);
+
+            await userModel.update(
+              { verify: true },
+              {
+                  where: { email: credentials.email },
+              },
+            );
+
             const loginRes = await request(server).post('/api/auth/login').send(credentials);
             logoutToken = loginRes.body.token;
         });
@@ -92,6 +121,14 @@ describe('Auth API (Real Database)', () => {
             // Ensure a user exists for current endpoint testing.
             const credentials = { email: 'currentuser@example.com', password: 'password123' };
             await request(server).post('/api/auth/register').send(credentials);
+
+            await userModel.update(
+              { verify: true },
+              {
+                  where: { email: credentials.email },
+              },
+            );
+
             const loginRes = await request(server).post('/api/auth/login').send(credentials);
             currentToken = loginRes.body.token;
         });
@@ -110,6 +147,14 @@ describe('Auth API (Real Database)', () => {
         beforeAll(async () => {
             const credentials = { email: 'subscriptionuser@example.com', password: 'password123' };
             await request(server).post('/api/auth/register').send(credentials);
+
+            await userModel.update(
+              { verify: true },
+              {
+                  where: { email: credentials.email },
+              },
+            );
+
             const loginRes = await request(server).post('/api/auth/login').send(credentials);
             subscriptionToken = loginRes.body.token;
         });
@@ -146,6 +191,52 @@ describe('Auth API (Real Database)', () => {
             expect(res.body).toHaveProperty('message', 'Avatar updated successfully');
             expect(res.body).toHaveProperty('avatarURL');
             expect(res.body.avatarURL).toMatch(/^\/avatars\/\d+_[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/);
+        });
+    });
+
+    describe('POST /api/verify/:verificationToken', () => {
+        const specificUserCreds = { email: `someVeryUniqueEmail@gmail.com`, password: 'password123' };
+
+        beforeEach(async () => {
+            const result = await request(server).post('/api/auth/register').send(specificUserCreds);
+        });
+
+        afterEach(async () => {
+            await userModel.destroy({ where: { email: specificUserCreds.email } });
+        });
+
+        it('should successfully verify user', async () => {
+            const userBefore = await userModel.findOne({ where: { email: specificUserCreds.email } });
+            const res = await request(server).get(`/api/auth/verify/${userBefore.verificationToken}`);
+            const userAfter = await userModel.findOne({ where: { email: specificUserCreds.email } });
+
+            expect(userBefore.verify).toBeFalsy();
+            expect(res.status).toBe(200);
+            expect(res.body.message).toEqual('Verification successful');
+            expect(userAfter.verify).toBeTruthy();
+        });
+    });
+
+    describe('POST /api/verify', () => {
+        const specificUserCreds = { email: `anotherVeryUniqueEmail@gmail.com`, password: 'password123' };
+
+        beforeEach(async () => {
+            await request(server).post('/api/auth/register').send(specificUserCreds);
+        });
+
+        afterEach(async () => {
+            await userModel.destroy({ where: { email: specificUserCreds.email } });
+        });
+
+        it('should successfully resend verification letter to user', async () => {
+            const userBefore = await userModel.findOne({ where: { email: specificUserCreds.email } });
+            const res = await request(server).post('/api/auth/verify').send({ email: specificUserCreds.email });
+
+            const userAfter = await userModel.findOne({ where: { email: specificUserCreds.email } });
+            expect(userBefore.verify).toBeFalsy();
+            expect(res.status).toBe(200);
+            expect(res.body.message).toEqual('Verification email sent');
+            expect(userAfter.verify).toBeFalsy();
         });
     });
 });

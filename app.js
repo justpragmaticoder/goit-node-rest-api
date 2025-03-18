@@ -2,6 +2,11 @@ import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
 import path from 'path';
+import dotenv from 'dotenv';
+import { expand } from 'dotenv-expand';
+
+// Load environment variables from .env
+expand(dotenv.config());
 
 import contactsRouter from './routes/contactsRouter.js';
 import authRouter from './routes/authRouter.js';

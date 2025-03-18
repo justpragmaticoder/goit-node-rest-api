@@ -1,7 +1,16 @@
 import express from 'express';
 import validateBody from '../helpers/validateBody.js';
-import { registerSchema, loginSchema, subscriptionSchema, updateAvatarSchema } from '../schemas/authSchemas.js';
-import { loginUser, registerUser, logoutUser, currentUser, updateUserSubscription, updateUserAvatar } from '../services/authServices.js';
+import { registerSchema, loginSchema, subscriptionSchema, updateAvatarSchema, resendVerifyEmailSchema } from '../schemas/authSchemas.js';
+import {
+    loginUser,
+    registerUser,
+    logoutUser,
+    currentUser,
+    updateUserSubscription,
+    updateUserAvatar,
+    verifyUserEmail,
+    resendVerifyUserEmail,
+} from '../services/authServices.js';
 import { catchAsyncUtil } from '../utils/catch-async.util.js';
 
 const router = express.Router();
@@ -50,6 +59,21 @@ export const updateAvatar = [
         const avatarURL = await updateUserAvatar({ userId: req.user.id, file: req.file });
 
         res.json({ message: 'Avatar updated successfully', avatarURL });
+    }),
+];
+
+export const verifyEmail = [
+    catchAsyncUtil(async (req, res) => {
+        await verifyUserEmail({ verificationToken: req.params.verificationToken });
+        res.status(200).json({ message: 'Verification successful' });
+    }),
+];
+
+export const resendVerifyEmail = [
+    validateBody(resendVerifyEmailSchema),
+    catchAsyncUtil(async (req, res) => {
+        const result = await resendVerifyUserEmail({ email: req.body.email });
+        res.status(result.status).json({ message: result.message });
     }),
 ];
 
