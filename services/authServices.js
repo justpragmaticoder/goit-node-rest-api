@@ -34,8 +34,11 @@ export const registerUser = async ({ email, password }) => {
 export const loginUser = async ({ email, password }) => {
     const user = await User.findOne({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-        console.log('Email or password is wrong');
         throw HttpError(401, 'Email or password is wrong');
+    }
+
+    if (!user.verify) {
+        throw HttpError(403, 'Email is not verified');
     }
 
     const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '24h' });
@@ -83,7 +86,7 @@ export const verifyUserEmail = async ({ verificationToken }) => {
 
 export const resendVerifyUserEmail = async ({ email }) => {
     const user = await User.findOne({ where: { email } });
-    if (!user || user.verify) {
+    if (!user) {
         return {
             status: 404,
             message: 'User not found',

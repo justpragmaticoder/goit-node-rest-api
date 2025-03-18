@@ -9,6 +9,7 @@ import {
     updateUserSubscription,
     updateUserAvatar,
     verifyUserEmail,
+    resendVerifyUserEmail,
 } from '../services/authServices.js';
 import { catchAsyncUtil } from '../utils/catch-async.util.js';
 
